@@ -77,24 +77,12 @@ class Piper(Gtk.ApplicationWindow):
         self._initialized = False
         self._button_function_labels = []
 
-        self._ratbag_device = self._fetch_ratbag_device(ratbag)
-        if self._ratbag_device == None:
-            return
-
         self._profile_buttons = []
         self._current_profile = self._ratbag_device.active_profile
 
         grid = main_window.get_object("piper-grid")
         self._init_header(self._ratbag_device)
         self.add(grid)
-
-        # load the right image
-        svg = self._ratbag_device.svg_path
-        img = main_window.get_object("piper-image-device")
-        if not os.path.isfile(svg):
-            img.set_from_resource("/org/freedesktop/Piper/404.svg")
-        else:
-            img.set_from_file(svg)
 
         # init the current profile's data
         p = self._current_profile
@@ -108,31 +96,6 @@ class Piper(Gtk.ApplicationWindow):
         self.show()
 
     def  _init_header(self, device):
-        hb = Gtk.HeaderBar()
-        hb.set_show_close_button(True)
-        hb.props.title = "{}".format(device.name)
-        self.set_titlebar(hb)
-
-        # apply/reset buttons
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        Gtk.StyleContext.add_class(box.get_style_context(), "linked")
-
-        button = Gtk.Button()
-        icon = Gio.ThemedIcon(name="edit-undo-symbolic")
-        image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON)
-        button.add(image)
-        button.connect("clicked", self.on_button_reset_clicked)
-        box.add(button)
-
-        button = Gtk.Button()
-        icon = Gio.ThemedIcon(name="document-save-symbolic")
-        image = Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON)
-        button.add(image)
-        button.connect("clicked", self.on_button_save_clicked)
-        box.add(button)
-
-        hb.pack_end(box)
-
         # Profile buttons
         profiles = device.profiles
         if len(profiles) > 1:
@@ -146,33 +109,6 @@ class Piper(Gtk.ApplicationWindow):
             hb.pack_start(box)
 
         hb.show_all()
-
-    def _fetch_ratbag_device(self, ratbag):
-        """
-        Get the first ratbag device available. If there are multiple
-        devices, an error message is printed and we default to the first
-        one.
-        Otherwise, an error is shown and we return None.
-        """
-        if ratbag == None:
-            self._show_error("Can't connect to ratbagd on DBus. That's quite unfortunate.")
-            return None
-        if len(ratbag.devices) == 0:
-            self._show_error("Could not find any devices. Do you have anything vaguely mouse-looking plugged in?")
-            return None
-
-        if len(ratbag.devices) > 1:
-            print("Ooops, can't deal with more than one device. My bad.")
-            for d in ratbag.devices[1:]:
-                print("Ignoring device {}".format(d.name))
-
-        d = ratbag.devices[0]
-        p = d.profiles
-        if len(p) == 1 and len(p[0].resolutions) == 1:
-            self._show_error("Device {} does not support switchable resolutions".format(d.name))
-            return None
-
-        return d
 
     def _init_resolution(self, builder, profile):
         res = profile.resolutions
@@ -444,15 +380,4 @@ class Piper(Gtk.ApplicationWindow):
         self._nres_button.set_value(nres)
         self._adjust_sensitivity_ranges()
         self._set_button_row_function_labels(profile)
-
-class PiperImage(Gtk.EventBox):
-    def __init__(self, path):
-        Gtk.EventBox.__init__(self)
-        self._image = Gtk.Image()
-        self._image.set_from_file(path)
-        self.add(self._image)
-        self.connect("button-press-event", self.on_button_clicked)
-
-    def on_button_clicked(self, widget, event):
-        print(event.x)
 
