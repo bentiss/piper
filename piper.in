@@ -4,11 +4,9 @@ import gettext
 import gi
 import locale
 import os
+import piper
 import signal
 import sys
-
-import piper
-from piper.application import Application
 
 gi.require_version('Gio', '2.0')
 gi.require_version('Gtk', '3.0')
@@ -23,7 +21,8 @@ if os.path.exists(os.path.join(srcdir, 'meson.build')):
         os.environ['GSETTINGS_SCHEMA_DIR'] = pkgdatadir
 else:
     pkgdatadir = '@pkgdatadir@'
-
+resource = Gio.resource_load(os.path.join(pkgdatadir, 'piper.gresource'))
+Gio.Resource._register(resource)
 
 def install_excepthook():
     """Make sure we exit when an unhandled exception occurs."""
@@ -38,15 +37,14 @@ def install_excepthook():
 
 
 if __name__ == "__main__":
+    from piper.application import Application
+
     install_excepthook()
 
     locale.bindtextdomain('piper', localedir)
     locale.textdomain('piper')
     gettext.bindtextdomain('piper', localedir)
     gettext.textdomain('piper')
-
-    resource = Gio.resource_load(os.path.join(pkgdatadir, 'piper.gresource'))
-    Gio.Resource._register(resource)
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     exit_status = Application().run(sys.argv)
