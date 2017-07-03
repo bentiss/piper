@@ -64,6 +64,20 @@ class _ButtonMapButton(Gtk.Button):
         dialog.response(Gtk.ResponseType.CANCEL)
 
 
+class _LedButton(Gtk.ButtonBox):
+    # A Gtk.ButtonBox subclass to implement the buttons that configure an LED
+    # according to the mockups.
+
+    def __init__(self, ratbagd_led, *args, **kwargs):
+        Gtk.ButtonBox.__init__(self, *args, **kwargs, orientation=Gtk.Orientation.HORIZONTAL)
+        self.set_layout(Gtk.ButtonBoxStyle.EXPAND)
+        self._led = ratbagd_led
+
+        for mode in ["Off", "On", "Cycle", "Breathing"]:
+            button = Gtk.MenuButton(mode)
+            self.pack_start(button, True, True, 0)
+
+
 class Window(Gtk.ApplicationWindow):
     """A Gtk.ApplicationWindow subclass to implement the main application
     window."""
@@ -86,6 +100,7 @@ class Window(Gtk.ApplicationWindow):
 
         device = self._fetch_ratbag_device()
         stack.add_titled(self._setup_buttons_page(device), "buttons", _("Buttons"))
+        stack.add_titled(self._setup_leds_page(device), "leds", _("LEDs"))
         self.set_titlebar(self._setup_headerbar(stack))
 
     def _setup_headerbar(self, stack):
@@ -111,6 +126,16 @@ class Window(Gtk.ApplicationWindow):
             mapbutton = _ButtonMapButton(button)
             mousemap.add(mapbutton, "#button{}".format(button.index))
             sizegroup.add_widget(mapbutton)
+        return mousemap
+
+    def _setup_leds_page(self, device):
+        mousemap = MouseMap("#LEDs", device, spacing=20, border_width=20)
+        sizegroup = Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL)
+        profile = device.active_profile
+        for led in profile.leds:
+            ledbutton = _LedButton(led)
+            mousemap.add(ledbutton, "#led{}".format(led.index))
+            sizegroup.add_widget(ledbutton)
         return mousemap
 
     def _fetch_ratbag_device(self):
