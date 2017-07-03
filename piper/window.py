@@ -23,6 +23,47 @@ from gi.repository import Gtk
 from .mousemap import MouseMap
 
 
+class _ButtonMapButton(Gtk.Button):
+    # A Gtk.Button subclass to implement the button that configures a button
+    # mapping according to the mockups.
+
+    def __init__(self, ratbagd_button, *args, **kwargs):
+        Gtk.Button.__init__(self, *args, **kwargs)
+        self._button = ratbagd_button
+
+        box = Gtk.Box(Gtk.Orientation.HORIZONTAL, border_width=0)
+        button = Gtk.Label("Button {}".format(ratbagd_button.button_mapping))
+        sep = Gtk.Separator.new(Gtk.Orientation.VERTICAL)
+        cog = Gtk.Image.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
+        box.pack_start(button, True, True, 4)
+        box.pack_end(cog, False, True, 4)
+        box.pack_end(sep, False, True, 4)
+        self.add(box)
+
+        self.connect("clicked", self._on_clicked)
+
+    def _on_clicked(self, button):
+        # Open the configuration dialog.
+        builder = Gtk.Builder().new_from_resource("/org/freedesktop/Piper/buttonmapDialog.ui")
+        builder.connect_signals(self)
+        dialog = builder.get_object("buttonmap_dialog")
+        dialog.set_transient_for(self.get_toplevel())
+        status = dialog.run()
+        if status == Gtk.ResponseType.ACCEPT:
+            print("TODO: apply changes")
+        dialog.destroy()
+
+    def _on_set_clicked(self, dialog):
+        # Emit the ::response signal with Gtk.ResponseType.ACCEPT so that
+        # control is handed back to our main loop.
+        dialog.response(Gtk.ResponseType.ACCEPT)
+
+    def _on_cancel_clicked(self, dialog):
+        # Emit the ::response signal with Gtk.ResponseType.CANCEL so that
+        # control is handed back to our main loop.
+        dialog.response(Gtk.ResponseType.CANCEL)
+
+
 class Window(Gtk.ApplicationWindow):
     """A Gtk.ApplicationWindow subclass to implement the main application
     window."""
@@ -67,7 +108,7 @@ class Window(Gtk.ApplicationWindow):
         sizegroup = Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL)
         profile = device.active_profile
         for button in profile.buttons:
-            mapbutton = Gtk.Button("Button {}".format(button.index))
+            mapbutton = _ButtonMapButton(button)
             mousemap.add(mapbutton, "#button{}".format(button.index))
             sizegroup.add_widget(mapbutton)
         return mousemap
