@@ -186,6 +186,10 @@ class RatbagdDevice(_RatbagdDBus):
         """
         return self.dbus_call("GetProfileByIndex", "u", index)
 
+    def commit(self):
+        """Commits all changes made to the device."""
+        return self.dbus_call("Commit", "")
+
     def __eq__(self, other):
         return other and self._objpath == other._objpath
 
@@ -327,18 +331,31 @@ class RatbagdResolution(_RatbagdDBus):
         """
         return self._caps
 
-    @GObject.Property
-    def resolution(self):
-        """The tuple (xres, yres) with each resolution in DPI."""
-        return (self._xres, self._yres)
+    @GObject.Property(type=int)
+    def resolution_x(self):
+        """The x resolution in DPI."""
+        return self._xres
 
-    @resolution.setter
-    def resolution(self, res):
-        """Set the x- and y-resolution using the given (xres, yres) tuple.
+    @resolution_x.setter
+    def resolution_x(self, xres):
+        """Set the x resolution.
 
-        @param res The new resolution, as (int, int)
+        @param xres The new x resolution, as int
         """
-        return self.dbus_call("SetResolution", "uu", *res)
+        return self.dbus_call("SetResolution", "uu", xres, self._yres)
+
+    @GObject.Property(type=int)
+    def resolution_y(self):
+        """The y resolution in DPI."""
+        return self._yres
+
+    @resolution_y.setter
+    def resolution_y(self, yres):
+        """Set the y resolution.
+
+        @param yres The new y resolution, as int
+        """
+        return self.dbus_call("SetResolution", "uu", self._xres, yres)
 
     @GObject.Property
     def report_rate(self):

@@ -111,8 +111,8 @@ class MouseMap(Gtk.Container):
         self._children = []
         self._highlight_element = None
 
-        self._handle = Rsvg.Handle.new_from_file(ratbagd_device.svg_path)
-        self._svg_data = etree.parse(ratbagd_device.svg_path)
+        self._handle = Rsvg.Handle.new_from_file("/home/jente/code/src/github.com/libratbag/libratbag/data/logitech-g403.svg")
+        self._svg_data = etree.parse("/home/jente/code/src/github.com/libratbag/libratbag/data/logitech-g403.svg")
 
         # TODO: remove this when we're out of the transition to toned down SVGs
         device = self._handle.has_sub("#Device")

@@ -18,10 +18,57 @@ from gettext import gettext as _
 
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import GObject, Gtk
 
 from .mousemap import MouseMap
 from .gi_composites import GtkTemplate
+
+
+@GtkTemplate(ui="/org/freedesktop/Piper/resolutionRow.ui")
+class _ResolutionRow(Gtk.ListBoxRow):
+    # A Gtk.ListBoxRow subclass to implement the resolution listbox according
+    # to the mockups.
+
+    __gtype_name__ = "ResolutionRow"
+
+    index_label = GtkTemplate.Child()
+    rate_label = GtkTemplate.Child()
+    revealer = GtkTemplate.Child()
+    frame_y = GtkTemplate.Child()
+    adjustment_x = GtkTemplate.Child()
+    adjustment_y = GtkTemplate.Child()
+
+    def __init__(self, ratbagd_resolution, *args, **kwargs):
+        Gtk.ListBoxRow.__init__(self, *args, **kwargs)
+        self.init_template()
+        self._resolution = ratbagd_resolution
+
+        self.index_label.set_text("Resolution {}".format(ratbagd_resolution.index))
+        # TODO: move the report rate into the configuration? it seems to be per
+        # resolution...
+        self.rate_label.set_text("{} DPI".format(ratbagd_resolution.resolution_x))
+
+        flags = GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE
+        cap = ratbagd_resolution.CAP_SEPARATE_XY_RESOLUTION
+
+        self.frame_y.set_visible(cap in ratbagd_resolution.capabilities)
+        self.adjustment_y.set_lower(ratbagd_resolution.min_res)
+        self.adjustment_y.set_upper(ratbagd_resolution.max_res)
+        ratbagd_resolution.bind_property("resolution-y", self.adjustment_y,
+                                         "value", flags)
+        self.adjustment_x.set_lower(ratbagd_resolution.min_res)
+        self.adjustment_x.set_upper(ratbagd_resolution.max_res)
+        ratbagd_resolution.bind_property("resolution-x", self.adjustment_x,
+                                         "value", flags)
+
+    @GtkTemplate.Callback
+    def _on_delete_button_clicked(self, button):
+        print("TODO: RatbagdProfile needs a way to delete resolutions")
+
+    def toggle_revealer(self):
+        """Toggles the revealer to show or hide the configuration widgets."""
+        reveal = not self.revealer.get_reveal_child()
+        self.revealer.set_reveal_child(reveal)
 
 
 class _ButtonMapButton(Gtk.Button):
@@ -87,6 +134,8 @@ class Window(Gtk.ApplicationWindow):
     __gtype_name__ = "ApplicationWindow"
 
     stack = GtkTemplate.Child()
+    listbox = GtkTemplate.Child()
+    add_resolution_row = GtkTemplate.Child()
 
     def __init__(self, ratbag, *args, **kwargs):
         """Instantiates a new Window.
@@ -97,10 +146,26 @@ class Window(Gtk.ApplicationWindow):
         self.init_template()
 
         self._ratbag = ratbag
+        self._device = self._fetch_ratbag_device()
+        self._previous_resolution_row = None
 
-        device = self._fetch_ratbag_device()
-        self.stack.add_titled(self._setup_buttons_page(device), "buttons", _("Buttons"))
-        self.stack.add_titled(self._setup_leds_page(device), "leds", _("LEDs"))
+        self._setup_resolutions_page(self._device)
+        self.stack.add_titled(self._setup_buttons_page(self._device), "buttons", _("Buttons"))
+        self.stack.add_titled(self._setup_leds_page(self._device), "leds", _("LEDs"))
+
+    def _setup_resolutions_page(self, device):
+        # TODO: mousemap needs to show which button switches resolution
+        mousemap = MouseMap("#Device", device, spacing=20, border_width=20)
+
+        page = self.stack.get_child_by_name("resolutions")
+        page.pack_start(mousemap, True, True, 0)
+        # Place the MouseMap on the left
+        page.reorder_child(mousemap, 0)
+
+        profile = device.active_profile
+        for resolution in profile.resolutions:
+            row = _ResolutionRow(resolution)
+            self.listbox.prepend(row)
 
     def _setup_buttons_page(self, device):
         mousemap = MouseMap("#Buttons", device, spacing=20, border_width=20)
@@ -135,3 +200,14 @@ class Window(Gtk.ApplicationWindow):
             for d in self._ratbag.devices[1:]:
                 print("Ignoring device {}".format(d.name))
         return self._ratbag.devices[0]
+
+    @GtkTemplate.Callback
+    def _on_row_activated(self, listbox, row):
+        if row == self.add_resolution_row:
+            print("TODO: RatbagdProfile needs a way to add resolutions")
+        elif row is not None:
+            row.toggle_revealer()
+
+    @GtkTemplate.Callback
+    def _on_save_button_clicked(self, button):
+        self._device.commit()
