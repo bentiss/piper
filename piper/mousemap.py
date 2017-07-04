@@ -114,6 +114,13 @@ class MouseMap(Gtk.Container):
         self._handle = Rsvg.Handle.new_from_file(ratbagd_device.svg_path)
         self._svg_data = etree.parse(ratbagd_device.svg_path)
 
+        # TODO: remove this when we're out of the transition to toned down SVGs
+        device = self._handle.has_sub("#Device")
+        buttons = self._handle.has_sub("#Buttons")
+        leds = self._handle.has_sub("#LEDs")
+        if not device or not buttons or not leds:
+            print("Device SVG is incompatible", file=sys.stderr)
+
     def add(self, widget, svg_id):
         """Adds the given widget to the map, bound to the given SVG element
         identifier. If the element identifier or its leader is not found in the
