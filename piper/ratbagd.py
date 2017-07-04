@@ -342,7 +342,9 @@ class RatbagdResolution(_RatbagdDBus):
 
         @param xres The new x resolution, as int
         """
-        return self.dbus_call("SetResolution", "uu", xres, self._yres)
+        if not RatbagdResolution.CAP_SEPARATE_XY_RESOLUTION in self.capabilities:
+            return self.dbus_call("SetResolution", "u", xres)
+        return self.dbus_call("SetResolutionXY", "uu", xres, self._yres)
 
     @GObject.Property(type=int)
     def resolution_y(self):
@@ -355,7 +357,9 @@ class RatbagdResolution(_RatbagdDBus):
 
         @param yres The new y resolution, as int
         """
-        return self.dbus_call("SetResolution", "uu", self._xres, yres)
+        if not RatbagdResolution.CAP_SEPARATE_XY_RESOLUTION in self.capabilities:
+            return self.dbus_call("SetResolution", "u", yres)
+        return self.dbus_call("SetResolutionXY", "uu", self._xres, yres)
 
     @GObject.Property
     def report_rate(self):
